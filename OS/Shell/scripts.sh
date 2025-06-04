@@ -262,3 +262,140 @@ fi
 for FILE in $(find ${destDir} -mindepth 1 -maxdepth 1 -type f -mmin -45) ; do
     cp ${FILE} ${OUTPUT}
 done
+
+# 05-b-4500
+# Да се напише shell скрипт, който получава при стартиране като параметър
+# в командния ред идентификатор на потребител.
+# Скриптът периодично (sleep(1)) да проверява дали потребителят е log-нат,
+# и ако да - да прекратява изпълнението си, извеждайки на стандартния изход подходящо съобщение.
+
+# NB! Можете да тествате по същият начин като в 05-b-4300.txt
+
+#!/bin/bash
+
+if [[ "${#}" -ne 1 ]]; then
+    echo "Only 1 arg"
+    exit 1
+fi
+
+if ! id "${1}" &> /dev/null ; then
+    echo "Not user"
+    exit 2
+fi
+
+while true ; do
+    if who | grep -q "${1}" ; then
+        echo "User "${1}" is logged"
+        exit 0
+    fi
+
+    sleep 1
+done
+
+# 05-b-4600
+# Да се напише shell скрипт, който валидира дали дадено цяло число попада в целочислен интервал.
+# Скриптът приема 3 аргумента: числото, което трябва да се провери; лява граница на интервала; дясна граница на интервала.
+# Скриптът да връща exit status:
+# - 3, когато поне един от трите аргумента не е цяло число
+# - 2, когато границите на интервала са обърнати
+# - 1, когато числото не попада в интервала
+# - 0, когато числото попада в интервала
+
+#!/bin/bash
+
+if [[ "${#}" -ne 3 ]]; then
+    echo "Needs 3 args"
+    exit 4
+fi
+
+for arg in "${@}" ; do
+    if [[ ! "${arg}" =~ ^-?[0-9]+$ ]]; then
+        echo "It is not a number or whole number"
+        exit 3
+    fi
+done
+
+if [[ "${3}" -lt "${2}" ]]; then
+    echo "Wrong interval"
+    exit 2
+fi
+
+if [[ ${1} -ge ${2} && ${1} -le ${3} ]] ; then
+        echo "Number is in interval"
+        exit 0
+else
+        echo "Number is not in interval"
+        exit 1
+fi
+
+# 05-b-4700
+# Да се напише shell скрипт, който форматира големи числа, за да са по-лесни за четене.
+# Като пръв аргумент на скрипта се подава цяло число.
+# Като втори незадължителен аргумент се подава разделител. По подразбиране цифрите се разделят с празен интервал.
+
+#!/bin/bash
+
+if [[ "${#}" -gt 2 ]]; then
+    echo "Too mush args"
+    exit 1
+fi
+
+if [[ "${#}" -lt 1 ]]; then
+    echo "Less args"
+    exit 1
+fi
+
+num="${1}"
+sep=' '
+
+if [[ "${#}" -eq 2 ]]; then
+    if echo ${2} | grep -E -q '^.$' ; then
+        sep=${2}
+    else
+        echo "Single character separator expected"
+        exit 2
+    fi
+fi
+
+if ! [[ "${num}" =~ ^-?[0-9]+$ ]] ; then
+        echo "Invalid number"
+        exit 2
+fi
+
+echo $(echo "${1}" | rev | sed -E 's/(.)/\1\n/g' | awk -v separator="${sep}" 'BEGIN {counter = 0;} {counter++; printf $0} counter%3==0{printf separator}' | rev | sed -E "s|^${sep}||g")
+
+# print num, reverse it, insert newline after every char, prints each digit with printf $0 (no newline), rev, removes leading sep
+
+# 05-b-4800
+# Да се напише shell скрипт, който приема файл и директория.
+# Скриптът проверява в подадената директория и нейните под-директории
+# дали съществува копие на подадения файл и отпечатва имената на намерените копия, ако съществуват такива.
+
+# NB! Под 'копие' разбираме файл със същото съдържание.
+
+#!/bin/bash
+
+if [[ "${#}" -ne 2 ]]; then
+    echo "Wrong args"
+    exit 1
+fi
+
+if [[ ! -f "${1}" ]]; then
+    echo "Not file"
+    exit 2
+fi
+
+if [[ ! -d "${2}" ]]; then
+    echo "Not dir"
+    exit 2
+fi
+
+file=${1}
+dir=${2}
+
+for f in $(find ${dir} -type f) ; do
+    diff -q ${file} ${f} > /dev/null
+    if [[ ${?} -eq 0 ]] ; then
+        echo "${f}"
+    fi
+done
